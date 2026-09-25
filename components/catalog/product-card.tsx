@@ -1,0 +1,3 @@
+import Link from 'next/link';
+import {Product,money} from '@/data/products';
+export function ProductCard({product:p}:{product:Product}){return <article className="product-card"><Link href={'/producto/'+p.slug} className="product-photo" aria-label={`Ver ${p.name} ${p.color}, ${money(p.price)}`}><img src={p.images.front} alt={`${p.name} ${p.color}, vista de frente`} width="896" height="1200" loading="lazy"/><img className="product-back" src={p.images.back} alt="" width="896" height="1200" loading="lazy"/><span className="photo-action">Ver prenda <span>↗</span></span></Link><div className="product-meta"><div><Link href={'/producto/'+p.slug}>{p.name}</Link><p><i style={{background:p.hex}}/>{p.color}</p></div><span className="price">{money(p.price)}</span></div></article>}

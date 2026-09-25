@@ -1,0 +1,19 @@
+export type Product = {slug:string;name:string;gender:'mujer'|'hombre';category:string;price:number;color:string;hex:string;sizes:string[];description:string;fit:string;images:{front:string;back:string}};
+const tops=['XS','S','M','L','XL'];
+const rows:Omit<Product,'images'>[]=[
+{slug:'mujer-top-basico-marfil',name:'Top básico',gender:'mujer',category:'Tops',price:49,color:'Marfil',hex:'#eae6d8',sizes:tops,description:'Textura acanalada, escote redondo y una silueta sencilla. Un punto de partida para llevar solo o en capas.',fit:'Ajustado'},
+{slug:'mujer-polo-oversize-cacao',name:'Polo camisero oversize',gender:'mujer',category:'Polos',price:79,color:'Cacao',hex:'#795644',sizes:tops,description:'Cuello camisero, botones al frente y hombros relajados. El tono cacao combina con denim y colores claros.',fit:'Oversize'},
+{slug:'mujer-jean-recto-azul',name:'Jean recto',gender:'mujer',category:'Jeans',price:119,color:'Azul medio',hex:'#56768e',sizes:['26','28','30','32'],description:'Silueta recta y lavado azul medio. Una pieza versátil para acompañar tops, polos y capas ligeras.',fit:'Recto'},
+{slug:'mujer-pantalon-amplio-arena',name:'Pantalón amplio',gender:'mujer',category:'Pantalones',price:99,color:'Arena',hex:'#c9b89c',sizes:tops,description:'Pierna amplia y caída suave en un tono arena. Una silueta relajada que se mueve contigo.',fit:'Amplio'},
+{slug:'mujer-polera-cuello-redondo-salvia',name:'Polera cuello redondo',gender:'mujer',category:'Poleras',price:99,color:'Salvia',hex:'#9cafa1',sizes:tops,description:'Cuello redondo y terminaciones acanaladas. Un tono salvia suave para sumar una capa a tus días.',fit:'Relajado'},
+{slug:'mujer-casaca-ligera-azul-noche',name:'Casaca ligera',gender:'mujer',category:'Casacas',price:149,color:'Azul noche',hex:'#26364b',sizes:tops,description:'Una capa ligera en azul profundo, con cuello y cierre frontal. Fácil de combinar con tus básicos.',fit:'Regular'},
+{slug:'hombre-polo-oversize-negro',name:'Polo oversize',gender:'hombre',category:'Polos',price:59,color:'Negro',hex:'#242726',sizes:tops,description:'Hombro caído, cuello redondo y una silueta amplia. El básico negro que encuentra lugar en cualquier combinación.',fit:'Oversize'},
+{slug:'hombre-polo-regular-oliva',name:'Polo camisero',gender:'hombre',category:'Polos',price:79,color:'Oliva',hex:'#72765a',sizes:tops,description:'Cuello camisero y botonadura corta en un tono oliva. Un corte regular para tus combinaciones diarias.',fit:'Regular'},
+{slug:'hombre-jean-recto-indigo',name:'Jean recto',gender:'hombre',category:'Jeans',price:119,color:'Índigo',hex:'#243b50',sizes:['30','32','34','36'],description:'Denim de tono índigo y pierna recta. Una base oscura para combinar con polos y sobrecamisas.',fit:'Recto'},
+{slug:'hombre-pantalon-cargo-carbon',name:'Pantalón cargo',gender:'hombre',category:'Pantalones',price:119,color:'Carbón',hex:'#494a47',sizes:['30','32','34','36'],description:'Bolsillos laterales y una silueta recta en carbón. Un clásico utilitario para un look relajado.',fit:'Recto'},
+{slug:'hombre-polera-capucha-gris',name:'Polera con capucha',gender:'hombre',category:'Poleras',price:109,color:'Gris',hex:'#b6b8b3',sizes:tops,description:'Capucha, bolsillo frontal y puños acanalados. Una capa cómoda de líneas simples.',fit:'Relajado'},
+{slug:'hombre-sobrecamisa-piedra',name:'Sobrecamisa',gender:'hombre',category:'Sobrecamisas',price:139,color:'Piedra',hex:'#aaa69b',sizes:tops,description:'Cuello clásico, botones al frente y bolsillos de tapa. Llévala cerrada o abierta sobre un polo.',fit:'Regular'},
+];
+export const products:Product[]=rows.map(p=>({...p,images:{front:`/images/${p.slug}-frente.webp`,back:`/images/${p.slug}-espalda.webp`}}));
+export const getProduct=(slug:string)=>products.find(p=>p.slug===slug);
+export const money=(n:number)=>new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN',minimumFractionDigits:2}).format(n);

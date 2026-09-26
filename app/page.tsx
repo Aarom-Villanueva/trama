@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, ArrowRight } from 'lucide-react';
 import { products } from '@/data/products';
+import { featuredProductSlugs } from '@/data/catalog-presentation';
 import { ProductCard } from '@/components/catalog/product-card';
 export default function Home() {
   return <main id="main">
@@ -11,7 +12,7 @@ export default function Home() {
         <div className="campaign-label"><div><span className="eyebrow">06 PRENDAS / UNA COLECCIÓN</span><h2>{i===0?'Mujer':'Hombre'}</h2></div><span className="campaign-cta"><span>Explorar</span><ArrowUpRight size={22}/></span></div>
       </Link>)}
     </section>
-    <section className="featured wrap"><div className="section-heading"><div><p className="eyebrow">EL PUNTO DE PARTIDA</p><h2>Tus próximos <em>esenciales.</em></h2></div><Link className="text-link" href="/catalogo">Ver la colección <ArrowRight size={18}/></Link></div><div className="product-grid">{['mujer-top-basico-marfil','hombre-polo-oversize-negro','mujer-polo-oversize-cacao','hombre-sobrecamisa-piedra'].map(slug=><ProductCard key={slug} product={products.find(p=>p.slug===slug)!}/>)}</div></section>
+    <section className="featured wrap"><div className="section-heading"><div><p className="eyebrow">EL PUNTO DE PARTIDA</p><h2>Tus próximos <em>esenciales.</em></h2></div><Link className="text-link" href="/catalogo">Ver la colección <ArrowRight size={18}/></Link></div><div className="product-grid">{featuredProductSlugs.map(slug=><ProductCard key={slug} product={products.find(p=>p.slug===slug)!}/>)}</div></section>
     <section className="collection-note wrap"><span className="eyebrow">MENOS RUIDO. MÁS TÚ.</span><p>Doce prendas.<br/>Infinitas formas de <em>combinarlas.</em></p><Link className="text-link" href="/catalogo">Encuentra las tuyas <ArrowUpRight size={18}/></Link></section>
   </main>
 }

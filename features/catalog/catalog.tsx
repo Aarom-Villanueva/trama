@@ -1,7 +1,7 @@
 'use client';
 import {useSearchParams,useRouter} from 'next/navigation';
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 import {ArrowRight,Search} from 'lucide-react';
 import {products} from '@/data/products';
 import {ProductCard} from '@/components/catalog/product-card';
@@ -11,7 +11,11 @@ import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/compo
 import {Empty,EmptyHeader,EmptyTitle,EmptyDescription} from '@/components/ui/empty';
 const normalize=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function Filter({label,value,options,onChange}:{label:string;value:string;options:{value:string;label:string}[];onChange:(v:string)=>void}){return <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label}><SelectValue placeholder={label}/></SelectTrigger><SelectContent>{options.map(o=><SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>}
-export function Catalog(){const params=useSearchParams();const router=useRouter();const gender=params.get('coleccion')||'todo';const query=params.get('q')||'';const category=params.get('categoria')||'todo';const size=params.get('talla')||'todo';const price=params.get('precio')||'todo';const sort=params.get('orden')||'recomendado';const [draft,setDraft]=useState(query);useEffect(()=>setDraft(query),[query]);
+export function Catalog(){const params=useSearchParams();const router=useRouter();const gender=params.get('coleccion')||'todo';const query=params.get('q')||'';const category=params.get('categoria')||'todo';const size=params.get('talla')||'todo';const price=params.get('precio')||'todo';const sort=params.get('orden')||'recomendado';const [draft,setDraft]=useState(query);
+ const [previousQuery,setPreviousQuery]=useState(query);
+ // Reset only on external query changes, before committing stale text to the DOM.
+ // The guard converges after one render and preserves drafts when other filters change.
+ if(previousQuery!==query){setPreviousQuery(query);setDraft(query)}
  const setFilter=(key:string,value:string)=>{const p=new URLSearchParams(params.toString());if(value==='todo'||!value)p.delete(key);else p.set(key,value);router.replace('/catalogo'+(p.size?'?'+p.toString():''),{scroll:false})};
  const base=products.filter(p=>gender==='todo'||!['mujer','hombre'].includes(gender)||p.gender===gender);const cats=[...new Set(base.map(p=>p.category))];const sizes=[...new Set(base.filter(p=>category==='todo'||p.category===category).flatMap(p=>p.sizes))];
  const visible=base.filter(p=>(category==='todo'||p.category===category)&&(size==='todo'||p.sizes.includes(size))&&(price==='todo'||(price==='hasta-80'?p.price<=80:p.price>80))&&normalize(p.name+' '+p.color+' '+p.category+' '+p.gender).includes(normalize(query)));

@@ -6,7 +6,10 @@ son el gestor y fuente de versiones. No se ejecuta sobre Vinext, D1 ni Workers.
 ## Superficie pública actual
 
 - `app/`: inicio, catálogo, detalle por slug, bolsa, metadata y composición.
-- `data/products.ts`: fuente activa para todas las rutas y WebMCP.
+- `data/products.ts`: fixture del seed; ninguna ruta pública lee este array.
+- `features/catalog/queries.ts`: consulta pública compartida en servidor.
+- `features/catalog/catalog-provider.tsx`: DTO publicado compartido en navegador.
+- `app/api/catalog/route.ts`: refresco público sin caché persistente.
 - `data/catalog-presentation.ts`: orden de destacados compartido por inicio y seed.
 - `features/catalog/`: filtros URL, detalle, galería y herramientas de lectura.
 - `features/bag/`: selección en `localStorage`, cantidades y subtotal de consulta.
@@ -14,13 +17,13 @@ son el gestor y fuente de versiones. No se ejecuta sobre Vinext, D1 ni Workers.
 - `public/images/`: 24 fotos de prendas y dos imágenes de campaña.
 - `lib/store-config.ts`: configuración demostrativa; número WhatsApp vacío.
 
-El import compartido de destacados no añade acceso a PostgreSQL. Los filtros,
-slugs, fotos, selección de talla y consulta por WhatsApp conservan su fuente.
+Los filtros, slugs, fotos y destacados se conservan en PostgreSQL. La bolsa usa
+IDs de variante y reconcilia datos antiguos o retirados del catálogo.
 `app/chatgpt-auth.ts` y `examples/d1/` son residuos no utilizados del starter;
 el ejemplo no es una ruta activa y está excluido de TypeScript. No son una
 solución de autenticación o persistencia para este despliegue.
 
-## Persistencia preparada, todavía desconectada de las rutas
+## Persistencia activa
 
 - `db/schema/catalog.ts`: cinco tablas, enums, claves e integridad SQL.
 - `db/client.ts`: fábrica de conexión Drizzle/pg, marcada `server-only`.
@@ -52,12 +55,13 @@ UUID identifica filas; `import_key` identifica su origen y no debe editarse.
 - Estado `draft`, `published`, `archived`; no hay borrado en cascada.
 - `position` conserva orden de productos, categorías, tallas, colores e imágenes;
   `featured_position` conserva el orden de destacados y es único cuando existe.
-- `created_at` y `updated_at` inicializan al insertar. La futura capa de escritura
-  deberá actualizar `updated_at` y comprobar/incrementar `version` explícitamente;
-  no hay un trigger ni operaciones administrativas implementadas aún.
+- `created_at` y `updated_at` inicializan al insertar. El servicio de escritura
+  actualiza timestamps y comprueba/incrementa `version` bajo bloqueo de fila.
 
-Las comprobaciones de publicación entre varias tablas corresponderán al futuro
-servicio de negocio. No existen aún tablas de usuarios, ventas o suscripciones.
+`features/products/validation.ts` valida entradas con Zod; `service.ts` autoriza
+y persiste el agregado en transacción. `actions.ts` revalida permisos por petición.
+`db/schema/auth.ts` define usuarios, cuentas, sesiones, verificaciones, límite de
+peticiones y acceso administrativo. No hay tablas de ventas o suscripciones.
 
 ## Importación
 
@@ -76,10 +80,22 @@ El seed no es una herramienta de sincronización ni reparación. Cambios futuros
 en la demo requieren una migración explícita. Se deben archivar productos, en vez
 de borrar físicamente toda una unidad importada, si no se desea reimportarla.
 
-## Siguiente etapa
+## Autenticación y administración
 
-Añadir Better Auth y autorización de administrador, reglas de escritura y panel.
-Después coordinar el cambio de fuente de inicio, catálogo, detalle, bolsa y WebMCP,
-incluyendo IDs de variante, disponibilidad desconocida y estrategia de caché.
-Los uploads y almacenamiento externo se incorporarán en su etapa autorizada.
-La base actual es para una tienda; todavía no incorpora aislamiento multiempresa.
+Better Auth 1.7.6 y su adaptador Drizzle 1.7.6 gestionan Google y las sesiones;
+Zod 4.6.5 satisface el peer de better-call 1.4.0. Next y React mantienen versiones.
+`lib/auth.ts` configura el proveedor y los hooks; `lib/require-admin.ts` verifica
+sesión y acceso a través de `lib/admin-policy.ts` en cada lectura y escritura.
+Solo el correo verificado configurado puede darse de alta, con permiso adicional
+en la base. Una sesión sola no basta. No hay autenticación criptográfica propia.
+
+`app/admin/(protected)` protege panel y formularios; `/admin/login` es público.
+`features/admin/` contiene UI y usa tipos de entrada separados del ORM.
+La previsualización requiere autorización antes de leer borradores. Los límites
+de publicación se verifican en servidor aunque el cliente se manipule.
+
+Ver [operación local, revocación y pruebas](docs/admin-local.md). El propietario
+confirmó el OAuth real y el flujo administrativo local; la evidencia automática
+y manual se distingue en [verification-admin.md](docs/verification-admin.md).
+Quedan pendientes almacenamiento externo y preparación de un entorno de Preview
+con su propia base. El sistema sigue siendo de una tienda.

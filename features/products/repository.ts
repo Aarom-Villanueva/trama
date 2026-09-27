@@ -5,12 +5,12 @@ import type { Database } from "../../db/client";
 import { categories, products, productColors, productImages, productVariants } from "../../db/schema/catalog";
 import { availabilityOf, type CatalogProduct } from "./types";
 
-// Not wired into any public route yet. Only published data crosses this boundary.
-export async function listPublishedProducts(db: Database = getDatabase()): Promise<CatalogProduct[]> {
+// Public callers use listPublishedProducts; unpublished reads require the admin guard.
+export async function readCatalogProducts(db: Database, publishedOnly = true): Promise<CatalogProduct[]> {
   return db.transaction(async (tx) => {
     const rows = await tx.select({ product: products, category: categories })
       .from(products).innerJoin(categories, eq(products.categoryId, categories.id))
-      .where(eq(products.status, "published")).orderBy(asc(products.position), asc(products.id));
+      .where(publishedOnly ? eq(products.status, "published") : undefined).orderBy(asc(products.position), asc(products.id));
     if (!rows.length) return [];
     const ids = rows.map(({ product }) => product.id);
     const colors = await tx.select().from(productColors).where(inArray(productColors.productId, ids)).orderBy(asc(productColors.position), asc(productColors.id));
@@ -21,8 +21,9 @@ export async function listPublishedProducts(db: Database = getDatabase()): Promi
       collection: p.collection, category: { slug: category.slug, name: category.name },
       priceMinor: p.priceMinor, currency: "PEN", position: p.position, featuredPosition: p.featuredPosition,
       colors: colors.filter((c) => c.productId === p.id).map(({ id, code, name, hex }) => ({ id, code, name, hex })),
-      variants: variants.filter((v) => v.productId === p.id && v.active).map(({ id, colorId, sizeCode, stock }) => ({ id, colorId, sizeCode, availability: availabilityOf(stock) })),
+      variants: variants.filter((v) => v.productId === p.id && v.active).map(({ id, colorId, sizeCode, stock }) => ({ id, colorId, sizeCode, availability: availabilityOf(stock), maxQuantity: stock === null ? 99 : Math.min(99, stock) })),
       images: images.filter((i) => i.productId === p.id).map(({ colorId, url, alt }) => ({ colorId, url, alt })),
     }));
   }, { isolationLevel: "repeatable read", accessMode: "read only" });
 }
+export async function listPublishedProducts(db: Database = getDatabase()) { return readCatalogProducts(db); }

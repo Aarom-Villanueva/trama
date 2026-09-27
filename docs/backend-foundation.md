@@ -1,3 +1,6 @@
+> Registro histórico de la etapa foundation. El estado actual del panel y la
+> lectura pública PostgreSQL se documentan en [admin-local.md](admin-local.md).
+
 # Base PostgreSQL local: alcance y verificación
 
 Implementación en `feature/trama-backend-foundation`, partiendo de `b3c86859d9`.

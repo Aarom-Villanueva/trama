@@ -13,7 +13,7 @@ export type CatalogProduct = {
   position: number;
   featuredPosition: number | null;
   colors: { id: string; code: string; name: string; hex: string }[];
-  variants: { id: string; colorId: string; sizeCode: string; availability: Availability }[];
+  variants: { id: string; colorId: string; sizeCode: string; availability: Availability; maxQuantity: number }[];
   images: { colorId: string | null; url: string; alt: string }[];
 };
 

@@ -8,6 +8,13 @@
       "when": 1790389264515,
       "tag": "0000_wandering_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790444256666,
+      "tag": "0001_admin_auth",
+      "breakpoints": true
     }
   ]
 }

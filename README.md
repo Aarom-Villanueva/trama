@@ -12,11 +12,16 @@ Las prendas no representan inventario comercial: disponibilidad por confirmar.
 
 ```sh
 npm ci
+npm run db:setup
+npm run db:up
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-Abrir http://localhost:3000. El catálogo público sigue usando `data/products.ts`:
-no necesita PostgreSQL ni variables de entorno para funcionar o compilar.
+Abrir http://localhost:3000. Todas las superficies públicas consultan PostgreSQL.
+La ejecución requiere DATABASE_URL local y migraciones aplicadas; el build no
+aplica migraciones ni carga datos. Para administrar, consultar [OAuth y panel](docs/admin-local.md).
 
 ```sh
 npm run typecheck
@@ -26,9 +31,9 @@ npm run build
 npm start
 ```
 
-`npm test` ejecuta pruebas sin PostgreSQL. `npm run lint` conserva siete
-advertencias preexistentes (seis imágenes HTML y una expresión del filtro).
-Ver [verificación y línea base](docs/backend-foundation.md).
+`npm test` ejecuta pruebas sin PostgreSQL. Lint mantiene advertencias de imágenes
+HTML; no se desactiva esa regla. Ver [línea base histórica](docs/backend-foundation.md)
+y [verificación del panel](docs/admin-local.md).
 
 ## PostgreSQL local exclusivo para TRAMA
 
@@ -105,15 +110,18 @@ debe establecer esa condición globalmente para Next.js.
 
 ## Alcance actual
 
-- Implementado: esquema PostgreSQL, migraciones, importación local repetible,
-  repositorio de lectura aislado y tipos públicos independientes de Drizzle.
+- Implementado: PostgreSQL, seed repetible, Better Auth + Google, permiso adicional
+  de administrador, panel de productos y lectura pública coordinada.
 - Las 12 prendas actuales producen 7 categorías, 12 colores, 57 variantes,
   24 imágenes y 4 destacados. Estos números se calculan y verifican contra el
   código; no son constantes impuestas al seed.
 - Todo el stock importado es `NULL`: significa **por confirmar**, nunca ilimitado.
 - Fotos actuales en `public/images`; frente/espalda y URLs conservadas.
-- Catálogo, inicio, detalle, bolsa y WebMCP siguen usando la fuente estática.
-- No hay login, panel, uploads, pedidos, checkout, pagos ni servicios cloud.
+- Catálogo, inicio, detalle, bolsa y WebMCP usan productos publicados de PostgreSQL.
+- OAuth real y el recorrido administrativo local fueron verificados manualmente
+  por el propietario; ver [registro y límites](docs/verification-admin.md).
+- No hay uploads, pedidos, checkout ni pagos. PostgreSQL sigue siendo local;
+  Google OAuth usa credenciales de desarrollo en `.env.local` ignorado.
 
 Ver [arquitectura](ARCHITECTURE.md), [despliegue actual](README-VERCEL.md) y
 [evidencias de implementación](docs/backend-foundation.md).

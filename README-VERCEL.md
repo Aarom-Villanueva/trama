@@ -3,10 +3,15 @@
 El proyecto actual es Next.js App Router. Usar Node.js 22, instalación `npm ci`,
 build `npm run build` y el preset Next.js. No definir una carpeta de salida manual.
 
-En esta etapa todas las rutas públicas conservan `data/products.ts`. No necesitan
-PostgreSQL para compilar o funcionar, y no hay panel, login ni endpoints de carga.
-Los módulos nuevos de base de datos están aislados y se ejecutan mediante comandos
-locales explícitos. No añadir `db:migrate` ni `db:seed` al build de Vercel.
+Esta rama local usa PostgreSQL en todas las rutas públicas y tiene panel y login.
+No se ha desplegado este hito. La demo publicada no cambia por editar localmente.
+`vercel.json` deshabilita los despliegues automáticos de Git únicamente para
+`feature/trama-backend-foundation`, para poder subir el checkpoint sin generar
+una Preview. Antes de autorizar un despliegue futuro de esta rama, revisar esa
+regla y preparar su entorno aislado. No modifica la configuración de `main`.
+Referencia: [git.deploymentEnabled](https://vercel.com/docs/project-configuration/git-configuration).
+El build no consulta PostgreSQL, pero la ejecución necesita una base configurada
+y migrada. No añadir `db:migrate` ni `db:seed` al build de Vercel.
 
 `compose.yaml` y `.env.local` pertenecen exclusivamente al desarrollo local.
 No copiar sus credenciales a Vercel, no subir `.env.local` y no conectar una Preview

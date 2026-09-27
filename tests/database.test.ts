@@ -9,6 +9,7 @@ import { listPublishedProducts } from "../features/products/repository";
 import { buildCatalogFixture, fixtureCounts } from "../scripts/lib/catalog-fixture";
 import { localDatabaseUrl, openLocalDatabase } from "../scripts/lib/local-db";
 import { seedCatalog } from "../scripts/lib/seed";
+import { adminScenarios } from "./admin-scenarios";
 
 function postgresCode(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined;
@@ -49,7 +50,7 @@ test("PostgreSQL foundation on an isolated disposable database", { timeout: 6000
       await migrate(db, { migrationsFolder: "./drizzle" });
       await migrate(db, { migrationsFolder: "./drizzle" });
       const after = await pool.query("select tablename from pg_tables where schemaname = 'public'");
-      assert.deepEqual(after.rows.map((r) => r.tablename).sort(), ["category", "product", "product_color", "product_image", "product_variant"]);
+      assert.deepEqual(after.rows.map((r) => r.tablename).sort(), ["admin_access", "auth_account", "auth_rate_limit", "auth_session", "auth_user", "auth_verification", "category", "product", "product_color", "product_image", "product_variant"]);
     });
 
     await t.test("dry run plans the import without writing", async () => {
@@ -145,6 +146,7 @@ test("PostgreSQL foundation on an isolated disposable database", { timeout: 6000
       await assert.rejects(() => seedCatalog(db, { fixture: conflicting }), (error: unknown) => postgresCode(error) === "23505");
       assert.deepEqual(await snapshot(db), before);
     });
+    await adminScenarios(t, db);
   } finally {
     if (connection) await connection.pool.end();
     if (created) {

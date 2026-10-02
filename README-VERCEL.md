@@ -1,37 +1,26 @@
-# TRAMA — catálogo de ropa
+# TRAMA en Vercel
 
-Proyecto Next.js independiente listo para ejecutarse localmente y publicarse en Vercel.
+El proyecto actual es Next.js App Router. Usar Node.js 22, instalación `npm ci`,
+build `npm run build` y el preset Next.js. No definir una carpeta de salida manual.
 
-## Ejecutarlo en Windows
+Esta rama local usa PostgreSQL en todas las rutas públicas y tiene panel y login.
+No se ha desplegado este hito. La demo publicada no cambia por editar localmente.
+`vercel.json` deshabilita los despliegues automáticos de Git únicamente para
+`feature/trama-backend-foundation`, para poder subir el checkpoint sin generar
+una Preview. Antes de autorizar un despliegue futuro de esta rama, revisar esa
+regla y preparar su entorno aislado. No modifica la configuración de `main`.
+Referencia: [git.deploymentEnabled](https://vercel.com/docs/project-configuration/git-configuration).
+El build no consulta PostgreSQL, pero la ejecución necesita una base configurada
+y migrada. No añadir `db:migrate` ni `db:seed` al build de Vercel.
 
-1. Instala Node.js 22 LTS desde nodejs.org.
-2. Extrae esta carpeta.
-3. Abre una terminal dentro de `trama-catalogo`.
-4. Ejecuta:
+`compose.yaml` y `.env.local` pertenecen exclusivamente al desarrollo local.
+No copiar sus credenciales a Vercel, no subir `.env.local` y no conectar una Preview
+a una base de producción. `.env.example` documenta únicamente valores ficticios.
 
-```bash
-npm install
-npm run dev
-```
+El futuro paso a persistencia pública necesitará provisión separada de PostgreSQL,
+gestión de secretos, migraciones controladas y pruebas en Preview aislada. Esa
+integración y cualquier despliegue quedan fuera de esta implementación.
 
-5. Abre http://localhost:3000
-
-## Publicarlo en Vercel
-
-1. Crea un repositorio nuevo y sube el contenido de esta carpeta.
-2. En Vercel elige **Add New Project** y selecciona ese repositorio.
-3. Framework: **Next.js**.
-4. Build command: `npm run build`.
-5. Output directory: déjalo vacío.
-6. Pulsa **Deploy**.
-
-## Qué incluye
-
-- Inicio con campañas Mujer y Hombre.
-- Catálogo de 12 prendas, filtros y búsqueda.
-- Fichas con fotos de frente y espalda.
-- Selección de talla y cantidad.
-- Bolsa persistente en el navegador.
-- Consulta preparada para WhatsApp.
-
-Los precios, el nombre TRAMA y el número de WhatsApp son demostrativos. Para un negocio real, edita `data/products.ts` y `lib/store-config.ts`. No hay pagos, reservas ni stock real en esta versión.
+Las imágenes existentes se publican como archivos versionados en `public/images`.
+Las nuevas cargas administrables necesitarán almacenamiento persistente externo;
+no se escribirán en el disco de una función de Vercel.

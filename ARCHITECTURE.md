@@ -1,34 +1,101 @@
-# TRAMA — catálogo conceptual
+# Arquitectura de TRAMA
 
-Proyecto independiente. React, TypeScript y rutas App Router sobre el starter Vinext de Sites. No se utiliza el runtime de exportación de Claude Design.
+Una aplicación Next.js 16.3.4, React 19.2.6 y TypeScript 5.9.3. npm y su lockfile
+son el gestor y fuente de versiones. No se ejecuta sobre Vinext, D1 ni Workers.
 
-## Organización
+## Superficie pública actual
 
-- `app/`: rutas, metadata y composición global. Inicio, catálogo, producto por slug, bolsa y 404.
-- `data/products.ts`: colección tipada de 12 productos y rutas a sus 24 fotografías. Precios, tallas y descripciones son demostrativos.
-- `features/catalog/`: filtros sincronizados con la URL, galería y selección de talla. Las funciones WebMCP de lectura usan los mismos datos y bolsa.
-- `features/bag/`: estado local de selección, validación, cantidades y subtotal. El proveedor conserva la selección en localStorage después de cargarla; no simula inventario real.
-- `components/catalog/`: tarjeta y selector de cantidad reutilizables.
-- `components/layout/`: encabezado con búsqueda y pie compartidos.
-- `components/ui/`: primitivas accesibles del starter, conservadas sin modificar.
-- `lib/store-config.ts`: nombre y número de WhatsApp del negocio.
-- `public/images/`: 26 copias WebP optimizadas a partir de los archivos del usuario. Los originales permanecen en el ZIP de origen.
-- `app/globals.css`: tokens de marca, composición y reglas responsive.
+- `app/`: inicio, catálogo, detalle por slug, bolsa, metadata y composición.
+- `data/products.ts`: fixture del seed; ninguna ruta pública lee este array.
+- `features/catalog/queries.ts`: consulta pública compartida en servidor.
+- `features/catalog/catalog-provider.tsx`: DTO publicado compartido en navegador.
+- `app/api/catalog/route.ts`: refresco público sin caché persistente.
+- `data/catalog-presentation.ts`: orden de destacados compartido por inicio y seed.
+- `features/catalog/`: filtros URL, detalle, galería y herramientas de lectura.
+- `features/bag/`: selección en `localStorage`, cantidades y subtotal de consulta.
+- `components/`, `app/globals.css`: presentación y componentes reutilizables.
+- `public/images/`: 24 fotos de prendas y dos imágenes de campaña.
+- `lib/store-config.ts`: configuración demostrativa; número WhatsApp vacío.
 
-## Comportamiento
+Los filtros, slugs, fotos y destacados se conservan en PostgreSQL. La bolsa usa
+IDs de variante y reconcilia datos antiguos o retirados del catálogo.
+`app/chatgpt-auth.ts` y `examples/d1/` son residuos no utilizados del starter;
+el ejemplo no es una ruta activa y está excluido de TypeScript. No son una
+solución de autenticación o persistencia para este despliegue.
 
-El catálogo guarda filtros en parámetros URL, para que puedan compartirse y usarse con atrás/adelante. Cada prenda tiene una URL propia y dos vistas. La selección necesita una talla válida y limita las cantidades a 1–99. Las líneas se distinguen por producto y talla.
+## Persistencia activa
 
-WhatsApp recibe un texto con productos, tallas, cantidades y subtotal; no hay pago, reserva ni confirmación de pedido. Al no haberse proporcionado un número comercial, el enlace permite al visitante elegir destinatario. Para adaptar la demo a una tienda, establecer `whatsappNumber` en formato internacional, solo dígitos. No usar el teléfono personal del desarrollador sin su autorización.
+- `db/schema/catalog.ts`: cinco tablas, enums, claves e integridad SQL.
+- `db/client.ts`: fábrica de conexión Drizzle/pg, marcada `server-only`.
+- `db/index.ts`: acceso diferido; no abre conexiones durante un build público.
+- `features/products/repository.ts`: lectura de productos publicados en una
+  transacción coherente de solo lectura; no exporta filas completas de la base.
+- `features/products/types.ts`: contrato público independiente del ORM;
+  disponibilidad como `to_confirm`, `out_of_stock` o `available`.
+- `drizzle.config.ts`, `drizzle/`: generación sin credenciales y migraciones SQL.
+- `scripts/lib/local-db.ts`: protección de comandos locales y errores sin secretos.
+- `scripts/lib/catalog-fixture.ts`, `scripts/lib/seed.ts`: conversión e importación.
+- `tests/`: reglas de conversión/aislamiento y pruebas sobre PostgreSQL real.
 
-## Evolución hacia un catálogo administrable
+## Modelo y restricciones
 
-La siguiente fase sustituiría la fuente local de productos por persistencia y añadiría autenticación de administradores, validación en servidor y almacenamiento de fotos. No se ha creado un backend ficticio ni se presenta esta demo como una tienda con stock sincronizado.
+`category` → `product` → `product_color`, `product_variant`, `product_image`.
+Producto es la prenda; variante es una combinación talla/color con SKU propio.
+UUID identifica filas; `import_key` identifica su origen y no debe editarse.
 
-## Desarrollo
+- Slug único de categoría y producto, normalizado en minúsculas.
+- SKU global único y normalizado en mayúsculas; combinación
+  `(product_id, color_id, size_code)` única.
+- FK compuestas aseguran que el color de una variante o imagen pertenezca al
+  mismo producto. Una imagen puede no asociarse a un color, pero siempre a un producto.
+- `price_minor` es entero en céntimos, no negativo; `currency` es PEN.
+  La conversión valida texto decimal y usa enteros, sin redondear punto flotante.
+- `stock` es entero no negativo o NULL. NULL solo significa disponibilidad
+  desconocida. No autoriza una futura venta ni reserva.
+- Estado `draft`, `published`, `archived`; no hay borrado en cascada.
+- `position` conserva orden de productos, categorías, tallas, colores e imágenes;
+  `featured_position` conserva el orden de destacados y es único cuando existe.
+- `created_at` y `updated_at` inicializan al insertar. El servicio de escritura
+  actualiza timestamps y comprueba/incrementa `version` bajo bloqueo de fila.
 
-Utilizar el gestor y lockfile declarados por el proyecto: `pnpm install`, `pnpm dev`, `pnpm build`. Node según `package.json`. El starter contiene adaptadores de ejecución para el entorno de Sites; leer su README para el despliegue. No incluir credenciales en el código.
+`features/products/validation.ts` valida entradas con Zod; `service.ts` autoriza
+y persiste el agregado en transacción. `actions.ts` revalida permisos por petición.
+`db/schema/auth.ts` define usuarios, cuentas, sesiones, verificaciones, límite de
+peticiones y acceso administrativo. No hay tablas de ventas o suscripciones.
 
-## Revisión funcional
+## Importación
 
-Comprobar: 12 prendas, 6 por colección; búsqueda con acentos; filtros sin resultados; galería frente/espalda; talla obligatoria; suma de misma talla y separación de tallas distintas; persistencia tras recarga; eliminación y bolsa vacía; texto y subtotal de WhatsApp; navegación con teclado y diseño móvil.
+El fixture lee las fuentes actuales. Claves deterministas con prefijo
+`trama-demo:v1:`; SKU derivado de slug y talla (cada producto actual tiene un color).
+El orden del array determina `position`; las fotos mantienen sus URLs locales.
+
+El seed obtiene un bloqueo transaccional para serializar sus propias ejecuciones.
+Inserta categorías faltantes por `import_key` y cada producto nuevo con todos sus
+hijos dentro de una única transacción. Si ya existe la identidad de importación
+del producto, omite toda esa unidad: no modifica el producto ni reintroduce hijos
+eliminados por una edición posterior. Una colisión de slug/SKU con otra identidad
+falla y revierte la transacción; no adopta registros silenciosamente.
+
+El seed no es una herramienta de sincronización ni reparación. Cambios futuros
+en la demo requieren una migración explícita. Se deben archivar productos, en vez
+de borrar físicamente toda una unidad importada, si no se desea reimportarla.
+
+## Autenticación y administración
+
+Better Auth 1.7.6 y su adaptador Drizzle 1.7.6 gestionan Google y las sesiones;
+Zod 4.6.5 satisface el peer de better-call 1.4.0. Next y React mantienen versiones.
+`lib/auth.ts` configura el proveedor y los hooks; `lib/require-admin.ts` verifica
+sesión y acceso a través de `lib/admin-policy.ts` en cada lectura y escritura.
+Solo el correo verificado configurado puede darse de alta, con permiso adicional
+en la base. Una sesión sola no basta. No hay autenticación criptográfica propia.
+
+`app/admin/(protected)` protege panel y formularios; `/admin/login` es público.
+`features/admin/` contiene UI y usa tipos de entrada separados del ORM.
+La previsualización requiere autorización antes de leer borradores. Los límites
+de publicación se verifican en servidor aunque el cliente se manipule.
+
+Ver [operación local, revocación y pruebas](docs/admin-local.md). El propietario
+confirmó el OAuth real y el flujo administrativo local; la evidencia automática
+y manual se distingue en [verification-admin.md](docs/verification-admin.md).
+Quedan pendientes almacenamiento externo y preparación de un entorno de Preview
+con su propia base. El sistema sigue siendo de una tienda.

@@ -1,19 +1,38 @@
-'use client';
-import {createContext,useContext,useEffect,useState,ReactNode} from 'react';
-import {getProduct,money} from '@/data/products';
-export type BagItem={slug:string;size:string;quantity:number};
-type BagContext={items:BagItem[];ready:boolean;add:(item:BagItem)=>void;change:(slug:string,size:string,quantity:number)=>void;remove:(slug:string,size:string)=>void;count:number;subtotal:number;message:string};
-const Context=createContext<BagContext|null>(null);
-export const BAG_KEY='trama-selection-v1';
-export function BagProvider({children}:{children:ReactNode}){
- const [items,setItems]=useState<BagItem[]>([]);const [ready,setReady]=useState(false);
- useEffect(()=>{try{const v=JSON.parse(localStorage.getItem(BAG_KEY)||'[]');if(Array.isArray(v))setItems(v.filter(x=>{const p=getProduct(x?.slug);return p&&p.sizes.includes(x.size)&&Number.isInteger(x.quantity)&&x.quantity>0&&x.quantity<=99}));}catch{}setReady(true)},[]);
- useEffect(()=>{if(ready)try{localStorage.setItem(BAG_KEY,JSON.stringify(items))}catch{}},[items,ready]);
- const add=(item:BagItem)=>{const p=getProduct(item.slug);if(!p||!p.sizes.includes(item.size)||!Number.isInteger(item.quantity)||item.quantity<1)return;setItems(old=>{const found=old.find(x=>x.slug===item.slug&&x.size===item.size);return found?old.map(x=>x===found?{...x,quantity:Math.min(99,x.quantity+item.quantity)}:x):[...old,{...item,quantity:Math.min(99,item.quantity)}]})};
- const change=(slug:string,size:string,quantity:number)=>{if(!Number.isInteger(quantity)||quantity<1||quantity>99)return;setItems(old=>old.map(x=>x.slug===slug&&x.size===size?{...x,quantity}:x))};
- const remove=(slug:string,size:string)=>setItems(old=>old.filter(x=>!(x.slug===slug&&x.size===size)));
- const subtotal=items.reduce((n,x)=>n+(getProduct(x.slug)?.price||0)*x.quantity,0);
- const message=['Hola, quisiera consultar esta selección de TRAMA (demostración):','',...items.map(x=>{const p=getProduct(x.slug)!;return `${x.quantity} × ${p.name} — ${p.color} — Talla ${x.size} — ${money(p.price*x.quantity)}`;}),'',`Subtotal referencial: ${money(subtotal)}`,'¿Podrían confirmarme disponibilidad y costo de envío?'].join('\n');
- return <Context.Provider value={{items,ready,add,change,remove,count:items.reduce((n,x)=>n+x.quantity,0),subtotal,message}}>{children}</Context.Provider>
+"use client";
+import { createContext, useContext, useEffect, useState } from "react";
+import { useCatalog } from "../catalog/catalog-provider";
+import { money, type StoreProduct } from "../catalog/model";
+import { reconcileSelection, type BagItem } from "./selection";
+export type { BagItem } from "./selection";
+export const BAG_KEY = "trama-selection-v2";
+type BagLine = { item: BagItem; product: StoreProduct; variant: StoreProduct["variants"][number]; color: string };
+type BagContext = { items: BagItem[]; lines: BagLine[]; ready: boolean; adjusted: boolean; add: (item: BagItem) => void; change: (variantId: string, quantity: number) => void; remove: (variantId: string) => void; count: number; subtotal: number; message: string };
+const Context = createContext<BagContext | null>(null);
+export function BagProvider({ children }: { children: React.ReactNode }) {
+  const { products } = useCatalog();
+  const [stored, setStored] = useState<unknown>([]);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate browser storage after SSR, before persistence is enabled.
+      setStored(JSON.parse(localStorage.getItem(BAG_KEY) ?? localStorage.getItem("trama-selection-v1") ?? "[]"));
+    } catch { setStored([]); }
+    setReady(true);
+  }, []);
+  const items = reconcileSelection(stored, products);
+  const serialized = JSON.stringify(items);
+  useEffect(() => { if (ready) try { localStorage.setItem(BAG_KEY, serialized); } catch {} }, [serialized, ready]);
+  const lines = items.flatMap((item): BagLine[] => {
+    const product = products.find((p) => p.variants.some((v) => v.id === item.variantId));
+    const variant = product?.variants.find((v) => v.id === item.variantId);
+    return product && variant ? [{ item, product, variant, color: product.colors.find((c) => c.id === variant.colorId)?.name ?? "" }] : [];
+  });
+  const add = (item: BagItem) => setStored((old: unknown) => reconcileSelection([...reconcileSelection(old, products), item], products));
+  const change = (variantId: string, quantity: number) => { if (Number.isInteger(quantity) && quantity > 0) setStored((old: unknown) => reconcileSelection(old, products).map((item) => item.variantId === variantId ? { ...item, quantity } : item)); };
+  const remove = (variantId: string) => setStored((old: unknown) => reconcileSelection(old, products).filter((item) => item.variantId !== variantId));
+  const subtotal = lines.reduce((sum, line) => sum + line.product.priceMinor * line.item.quantity, 0);
+  const message = ["Hola, quisiera consultar esta selección de TRAMA (demostración):", "", ...lines.map(({ item, product, variant, color }) => item.quantity + " × " + product.name + " — " + color + " — Talla " + variant.sizeCode + " — " + money(product.priceMinor * item.quantity)), "", "Subtotal referencial: " + money(subtotal), "¿Podrían confirmarme disponibilidad y costo de envío?"].join("\n");
+  const adjusted = Array.isArray(stored) && (stored.length !== items.length || stored.some((raw) => raw?.variantId && items.find((i) => i.variantId === raw.variantId)?.quantity !== raw.quantity));
+  return <Context.Provider value={{ items, lines, ready, adjusted, add, change, remove, subtotal, message, count: items.reduce((sum, item) => sum + item.quantity, 0) }}>{children}</Context.Provider>;
 }
-export function useBag(){const c=useContext(Context);if(!c)throw new Error('BagProvider missing');return c}
+export function useBag() { const value = useContext(Context); if (!value) throw new Error("BagProvider missing"); return value; }
